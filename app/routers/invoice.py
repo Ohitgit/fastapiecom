@@ -7,13 +7,10 @@ router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 @router.post("/", response_model=schemas.InvoiceRead)
 def create_product(invoice: schemas.InvoiceCreate, db: Session = Depends(get_db)):
-    suplier = db.query(models.Suplier).filter(models.Suplier.id == invoice.suplier_id).first()
-    if suplier:
-        raise HTTPException(status_code=400, detail="Suplier already exists")
-    
-    pharmacy = db.query(models.Pharmacy).filter(models.Pharmacy.id == invoice.pharmacy_id).first()
-    if pharmacy:
-        raise HTTPException(status_code=400, detail="Pharmacy already exists")
+    existing_invoice = db.query(models.Invoice).filter( models.Invoice.suplier_id == invoice.suplier_id, models.Invoice.pharmacy_id == invoice.pharmacy_id).first()
+    if existing_invoice:
+      raise HTTPException(status_code=400, detail="Invoice for this supplier and pharmacy already exists")
+
     new_product = models.Invoice(**invoice.dict())
     db.add(new_product)
     db.commit()
