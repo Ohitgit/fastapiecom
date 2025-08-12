@@ -1,6 +1,12 @@
-from sqlalchemy import Column, Integer, String,ForeignKey,Text,Numeric,Date
+from sqlalchemy import Column, Integer, String,ForeignKey,Text,Numeric,Date,Table
 from sqlalchemy.orm import relationship
 from app.database import Base
+invoice_invoice_multiple = Table(
+    "invoice_invoice_multiple",
+    Base.metadata,
+    Column("invoice_id", Integer, ForeignKey("invoices.id", ondelete="CASCADE"), primary_key=True),
+    Column("invoice_multiple_id", Integer, ForeignKey("invoices_multiple.id", ondelete="CASCADE"), primary_key=True)
+)
 
 class Invoice(Base):
     __tablename__ = "invoices"
@@ -45,6 +51,12 @@ class Invoice(Base):
     igst = Column(Numeric(6, 2), nullable=True)         # igst int
 
     total_mrp = Column(Numeric(12, 2), nullable=True)   # total mrp int/decimal
+
+    multiples = relationship(
+        "InvoiceMultiple",
+        secondary=invoice_invoice_multiple,
+        back_populates="invoices"
+    )
 
     def __repr__(self):
         return f"<InvoiceItem(id={self.id}, invoice_no={self.invoice_no}, medicine={self.medicine_name})>"

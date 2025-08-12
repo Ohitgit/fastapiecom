@@ -1,9 +1,17 @@
  uvicorn app.main:app --reload
+ uvicorn main.main:app --reload
+
  pstgrsql command
 
 
 1) sudo su postgres
 2)psql
-3)CREATE DATABASE Invoice;
+3)CREATE DATABASE flowvascular;
 
 4)\l  all table list show
+
+DROP TABLE InvoiceImport;
+
+pg_dump -s -t pharmacy_grn flowvascular
+
+\d+ pharmacy_grn

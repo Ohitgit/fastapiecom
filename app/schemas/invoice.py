@@ -1,5 +1,5 @@
 from pydantic import BaseModel, conint, constr,Field
-from typing import Optional
+from typing import Optional,List
 from datetime import date
 from decimal import Decimal
 from .suplier import SuplierRead
@@ -18,7 +18,7 @@ class InvoiceBase(BaseModel):
     invoice_no: str
     remark: str
     medicine_name: str
-    unit: UnitType
+    unit: str
     pack_cost: Decimal = Field(..., description="Pack cost (decimal)")
     pack_mrp: Decimal = Field(..., description="Pack MRP (decimal)")
 
@@ -47,15 +47,16 @@ class InvoiceBase(BaseModel):
     igst: Optional[Decimal] = None
 
     total_mrp: Optional[Decimal] = None
-
+    multiples: List[int] =[]
 
 class InvoiceCreate(InvoiceBase):
-    pass
+        pass
 
 class InvoiceRead(InvoiceBase):
     id: int
     suplier: SuplierRead
     pharmacy:PharmacyRead
+    
 
     class Config:
         orm_mode = True
