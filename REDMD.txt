@@ -6,12 +6,21 @@
 
 1) sudo su postgres
 2)psql
-3)CREATE DATABASE flowvascular;
+3)
 
 4)\l  all table list show
 
-DROP TABLE InvoiceImport;
+****** create database *****
 
-pg_dump -s -t pharmacy_grn flowvascular
 
-\d+ pharmacy_grn
+1)psql 
+
+2)CREATE DATABASE flowvascular;
+\q
+
+
+
+
+delete data
+
+DELETE FROM pharmacy_grn CASCADE;

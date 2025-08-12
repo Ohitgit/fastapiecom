@@ -1,0 +1,54 @@
+@router.post("/importexcel/")
+async def importexcel(
+    file: UploadFile, 
+    db: Session = Depends(get_db) 
+):
+    if not file.filename.endswith((".xlsx", ".xls", ".csv")):
+        raise HTTPException(status_code=400, detail="Invalid file format")
+
+    # Read file into DataFra
+    try:
+        if file.filename.endswith(".csv"):
+            df = pd.read_csv(file.file)
+        else:
+            df = pd.read_excel(BytesIO(await file.read()))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
+
+    # Validate columns
+    expected_columns = [
+        "Sl No", "Medicine Name", "Exp.Date", "Batch No", "Received Qty", 
+        "Free Qty", "Sheet Qty", "QOH", "Unit", "Pack Cost", "Pack Cost", 
+        "Disc (%)", "Total Amt", "CGST%", "SGST%", "IGST%", "Tab MRP"
+    ]
+    if not all(col in df.columns for col in expected_columns):
+        raise HTTPException(status_code=400, detail="Missing required columns")
+
+    # Limit to 100 rows
+    df = df.head(100)
+
+    invoices = []
+    for _, row in df.iterrows():
+        invoice = models.Invoice(
+            medicine_name=row["Medicine Name"],
+            ex_date=datetime.strptime(str(row["Exp.Date"]), "%Y-%m-%d").date() if pd.notnull(row["Exp.Date"]) else None,
+            batch_no=str(row["Batch No"]),
+            rec_qty=int(row["Received Qty"]),
+            free_qty=int(row["Free Qty"]) if pd.notnull(row["Free Qty"]) else 0,
+            sheet_qty=int(row["Sheet Qty"]),
+            qoh=int(row["QOH"]),
+            unit=row["Unit"],
+            pack_cost=row["Pack Cost"],
+            pack_mrp=row["Tab MRP"],
+            disc=row["Disc (%)"],
+            total_amt=row["Total Amt"],
+            cgst=row["CGST%"],
+            sgst=row["SGST%"],
+            igst=row["IGST%"] if pd.notnull(row["IGST%"]) else None
+        )
+        invoices.append(invoice)
+
+    db.add_all(invoices)
+    db.commit()
+
+    return {"message": f"{len(invoices)} excel file upload"}

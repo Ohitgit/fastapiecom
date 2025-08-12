@@ -72,3 +72,4 @@ class GRNRead(GRNBase):
 
 class MultipleGRNCreate(BaseModel):
     grns: List[GRNCreate]
+
