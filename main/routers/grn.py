@@ -61,6 +61,7 @@ def get_grns(
     from_date: str = Query(None),  # Accept as string/timestamp
     to_date: str = Query(None),
     page: int = Query(1, ge=1),
+    page_size:int=Query(10,ge=10),
     db: Session = Depends(get_db)
 ):
     """
@@ -87,7 +88,7 @@ def get_grns(
     from_date_parsed = parse_date(from_date)
     to_date_parsed = parse_date(to_date)
 
-    page_size = 10
+    page_size = page_size
     offset = (page - 1) * page_size
 
     if GRN_No is not None and from_date_parsed and to_date_parsed:
