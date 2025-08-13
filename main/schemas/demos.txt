@@ -47,3 +47,25 @@ class GRNRead(GRNBase):
 
 class MultipleGRNCreate(BaseModel):
     grns: List[GRNCreate]
+
+
+
+
+
+class GRNFilterRequest(BaseModel):
+    GRN__: int = Field(..., description="GRN ID")
+    from_date: date = Field(..., description="Start date for filtering")
+    to_date: date = Field(..., description="End date for filtering")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "GRN__": 1,
+                "from_date": "2025-08-01",
+                "to_date": "2025-08-12"
+            }
+        }
+
+
+
+     

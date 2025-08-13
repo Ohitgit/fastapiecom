@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends,Query, HTTPException
 from sqlalchemy.orm import Session
 from main.database import get_db
-from main.schemas.grn import GRNCreate,GRNRead
+from main.schemas.grn import GRNCreate,GRNRead,GRNFilterRequest
 from main.models.grn import GRN,GRNMedicine
 from datetime import date
 from typing import Optional
@@ -42,38 +42,34 @@ def get_grn(db: Session = Depends(get_db)):
     return db.query(GRN).all()
 
 
-@router.get("/grn", response_model=list[GRNRead])
-def read_grns(GRN__: int = Query(None),from_date: date = Query(None), to_date: date = Query(None),page: int = Query(1, ge=1),db: Session = Depends(get_db)):
+@router.get("/grn/{grn_id}", response_model=GRNRead)
+def read_grn(grn_id: int, db: Session = Depends(get_db)):
+    ''' particular grn data reterive '''
+    db_user = db.query(GRN).filter(GRN.id == grn_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Grn not found")
+    return db_user
+
+@router.post("/grn_filter")
+def filter_grn( filter_data: GRNFilterRequest, db: Session = Depends(get_db)):
     """
-    Retrieve GRN records.
-    
-    - If `GRN__`, `from_date`, and `to_date` are provided → returns filtered records.
-    - Else → returns paginated records (10 per page).
-    
+    Filter GRN records between given dates by GRN code.
     Args:
-        GRN__ (int, optional): GRN ID to filter.
-        from_date (date, optional): Start date for filtering.
-        to_date (date, optional): End date for filtering.
-        page (int): Page number (default: 1).
-        
-    Returns:
-        List of GRN records.
+        from_date (date): Start date for filtering.
+        to_date (date): End date for filtering.
+        grn_id (int): GRN ID to filter by.
     """
-    page_size = 10
-    offset = (page - 1) * page_size
 
-    # Filter if all params are given
-    if GRN__ is not None and from_date and to_date:
-        grns = (db.query(GRN).filter(GRN.id == GRN__,GRN.invoice_date.between(from_date, to_date)).all())
+    grn_id = filter_data.GRN__
+    from_date = filter_data.from_date
+    to_date = filter_data.to_date
+
+    if from_date and to_date and grn_id:
+        query = db.query(GRN).filter( GRN.invoice_date.between(from_date, to_date), GRN.id == grn_id)
     else:
-        grns = db.query(GRN).offset(offset).limit(page_size).all()
+        raise HTTPException(status_code=404, detail="Grn not found")
 
-    if not grns:
-        raise HTTPException(status_code=404, detail="No GRN records found")
-
-    return grns
-
-
+    return query.all()
 
 
 @router.put("/{grn_id}", response_model=GRNRead)

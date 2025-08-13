@@ -52,3 +52,32 @@ async def importexcel(
     db.commit()
 
     return {"message": f"{len(invoices)} excel file upload"}
+
+
+
+
+
+@router.get("/grn_filter", response_model=list[GRNRead])
+def filter_grn( grn_code: str = Query(..., example="GRN_1", description="Enter GRN ID with prefix"),from_date: Optional[date] = Query(None),to_date: Optional[date] = Query(None),db: Session = Depends(get_db)):
+    """
+    Filter GRN records between given dates by GRN code.
+    Args:
+        from_date (date): Start date for filtering.
+        to_date (date): End date for filtering.
+        grn_id (int): GRN ID to filter by.
+    """
+
+    # Extract numeric part from GRN_1 → 1
+    if grn_code.startswith("GRN_"):
+        grn_id = int(grn_code.replace("GRN_", ""))
+    else:
+        raise ValueError("GRN code must start with 'GRN_'")
+
+    
+
+    if from_date and to_date and grn_id:
+        query = db.query(GRN).filter( GRN.invoice_date.between(from_date, to_date), GRN.id == grn_id)
+    else:
+        raise HTTPException(status_code=404, detail="Grn not found")
+
+    return query.all()
