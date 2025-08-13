@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from main.database import get_db
 from main.schemas.grn import GRNCreate,GRNRead
 from main.models.grn import GRN,GRNMedicine
-from datetime import date
+from datetime import date,datetime
 from typing import Optional
-
+from sqlalchemy import func
 
 router = APIRouter(prefix="/Grn", tags=["Grns"])
 
@@ -28,43 +28,79 @@ def create_grn(product: GRNCreate, db: Session = Depends(get_db)):
         GRNRead: The newly created GRN record with its associated medicines.
     """
     product_data = product.dict()
-    medicines_data = product_data.pop("medicines", [])
-    new_grn = GRN(**product_data)
-    new_grn.medicines = [GRNMedicine(**med) for med in medicines_data]
+    medicines_data = product_data.pop("medicines", []) # this key only skip 
+    new_grn = GRN(**product_data) # then insert data
+    new_grn.medicines = [GRNMedicine(**med) for med in medicines_data] # medicines  key skip here then insert data all the medicines data inserted here
     db.add(new_grn)
     db.commit()
     db.refresh(new_grn)
     return new_grn
 
+@router.get("/read_grn", response_model=list[GRNRead])
+def read_grn(grn_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve GRN records by GRN ID.
+
+    This endpoint fetches all Goods Receipt Note (GRN) records
+    from the database that match the provided `grn_id`.
+
+    Args:
+        grn_id (int): The unique identifier of the GRN to be retrieved.
+        db (Session): SQLAlchemy database session dependency.
+
+    Returns:
+        list[GRNRead]: A list containing the GRN record(s) that match the given ID.
+    """
+    return db.query(GRN).filter(GRN.id == grn_id).all()
+
+
+
 @router.get("/get_grn", response_model=list[GRNRead])
-def get_grn(db: Session = Depends(get_db)):
-    ''' grn all data retrive '''
-    return db.query(GRN).all()
-
-
-@router.get("/grn", response_model=list[GRNRead])
-def read_grns(GRN__: int = Query(None),from_date: date = Query(None), to_date: date = Query(None),page: int = Query(1, ge=1),db: Session = Depends(get_db)):
+def get_grns(
+    GRN_No: int = Query(None),
+    from_date: str = Query(None),  # Accept as string/timestamp
+    to_date: str = Query(None),
+    page: int = Query(1, ge=1),
+    db: Session = Depends(get_db)
+):
     """
     Retrieve GRN records.
-    
-    - If `GRN__`, `from_date`, and `to_date` are provided → returns filtered records.
+
+    - If `GRN_No`, `from_date`, and `to_date` are provided → returns filtered records.
     - Else → returns paginated records (10 per page).
-    
-    Args:
-        GRN__ (int, optional): GRN ID to filter.
-        from_date (date, optional): Start date for filtering.
-        to_date (date, optional): End date for filtering.
-        page (int): Page number (default: 1).
-        
-    Returns:
-        List of GRN records.
     """
+    def parse_date(value):
+        if not value:
+            return None
+        try:
+            # Case: timestamp in milliseconds or seconds
+            if value.isdigit():
+                ts = int(value)
+                if ts > 1e12:  # milliseconds
+                    ts //= 1000
+                return datetime.fromtimestamp(ts).date()
+            # Case: ISO date string
+            return datetime.fromisoformat(value).date()
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {value}")
+
+    from_date_parsed = parse_date(from_date)
+    to_date_parsed = parse_date(to_date)
+
     page_size = 10
     offset = (page - 1) * page_size
 
-    # Filter if all params are given
-    if GRN__ is not None and from_date and to_date:
-        grns = (db.query(GRN).filter(GRN.id == GRN__,GRN.invoice_date.between(from_date, to_date)).all())
+    if GRN_No is not None and from_date_parsed and to_date_parsed:
+        grns = (
+            db.query(GRN)
+            .filter(
+                GRN.id == GRN_No,
+                GRN.invoice_date.between(from_date_parsed, to_date_parsed)
+            )
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
     else:
         grns = db.query(GRN).offset(offset).limit(page_size).all()
 
@@ -72,7 +108,6 @@ def read_grns(GRN__: int = Query(None),from_date: date = Query(None), to_date: d
         raise HTTPException(status_code=404, detail="No GRN records found")
 
     return grns
-
 
 
 
